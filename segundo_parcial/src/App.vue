@@ -1,97 +1,101 @@
+
 <template>
   <div>
-
-    <form @submit.prevent="estatusEditar ? updateTodo() : addTodo()">
+    <form @submit.prevent="editando ? editarLibro() : agregarLibro()">
+      <h2>Examen 2do Parcial</h2>
+      <br />
+      <h3>Título-Autor</h3>
       <p>
-        <input type="text" v-model="titulo">
-
-        <button type="submit">{{estatusEditar ? "Editar": "Agregar"}}</button>
-        <button v-if="estatusEditar" @click="estatusEditar= false, titulo=''">Cancelar</button>
+        <input type="text" v-model="titulo" id="inputTitulo" />
+        <input type="text" v-model="autor" id="inputAutor" />
+        <button type="enviar" id="botonEnviar">
+          {{ editando ? "Editar" : "Agregar" }}
+        </button>
+        <button v-if="editando" @click="cancelarEditar()">Cancelar</button>
       </p>
     </form>
-
-    <img src="https://pa1.narvii.com/6707/510b0daee67fbc091f14b9d8ef40aeb6c0d4dc7d_hq.gif" v-if="cargando">
-    
-    Lista de libros
-
+    <br />
     <ul>
-      <li v-for="todo in todos" :key="todo.id">
-        {{todo.titulo}} - 
-        <button @click="deleteTodo(todo)">Eliminar</button> - 
-        <button @click="selectTodo(todo)">Editar</button>
-
+      <li v-for="libro in libros" :key="libro.id">
+        {{libro.titulo }}<span id="autor"> - {{ libro.autor }}</span>
+        <span id="buttons">
+          <button @click="seleccionarLibro(libro)">Editar</button>
+          <button @click="eliminarLibro(libro)">Eliminar</button>
+        </span>
       </li>
     </ul>
-
   </div>
 </template>
 
 <script>
-import {db} from './firebase'
+import { db } from "./firebase";
 export default {
-  name: 'App',
+  name: "App",
   data() {
     return {
-      todos: [],
+      libros: [],
       id: "",
       titulo: "",
       autor: "",
       cargando: false,
-      estatusEditar: false 
-    }
+      editando: false,
+    };
   },
-  created(){
-    this.listarTodos();
+  created() {
+    this.listarLibros();
   },
-  methods: { 
-    async listarTodos(){
-          this.cargando = true;
-          const data = await db.collection("todos").get();
-          this.todos = data.docs.map(doc => ({
-            id: doc.id, ...doc.data()
-          }))
-         this.cargando = false;
-    console.log(this.todos);
+  methods: {
+    async listarLibros() {
+      this.cargando = true;
+      const data = await db.collection("libros").get();
+      this.libros = data.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      this.cargando = false;
     },
-    async addTodo() {
-        await db.collection('todos').add(
-          {
-            titulo: this.titulo
-          }
+    async agregarLibro() {
+      await db
+        .collection("libros")
+        .add({ titulo: this.titulo, autor: this.autor });
+      this.titulo = "";
+      this.autor = "";
+      this.listarLibros();
+    },
+    async eliminarLibro(libro) {
+      if (
+        confirm(
+          `Do you really want to delete ${libro.titulo}, by ${libro.autor}?`
         )
-        this.titulo = "";
-        this.listarTodos();
-    },
-    async deleteTodo(todo){
-      if(confirm(`Esta seguro de querer eliminar ${todo.titulo}`)){
-      await db.collection('todos').doc(todo.id).delete();
-      this.listarTodos();
+      ) {
+        this.cargando = true;
+        await db.collection("libros").doc(libro.id).delete();
+        this.cargando = false;
+        this.listarLibros();
       }
     },
-    selectTodo(todo){
-      this.estatusEditar = true;
-      this.id = todo.id;
-      this.titulo = todo.titulo;
+    seleccionarLibro(libro) {
+      this.editando = true;
+      this.id = libro.id;
+      this.titulo = libro.titulo;
+      this.autor = libro.autor;
     },
-    async updateTodo(){
-      await db.collection('todos').doc(this.id).set({
-        titulo: this.titulo
-      })
-      this.estatusEditar = false;
-      this.id= "";
-      this.titulo= "";
-      this.listarTodos();
-    }
+    async editarLibro() {
+      await db.collection("libros").doc(this.id).set({
+        titulo: this.titulo,
+        autor: this.autor,
+      });
+      this.editando = false;
+      this.id = "";
+      this.titulo = "";
+      this.autor = "";
+      this.listarLibros();
+    },
+    cancelarEditar() {
+      this.editando = false;
+      this.titulo = "";
+      this.autor = "";
+    },
   },
-}
+};
 </script>
-
-<style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  color: #2c3e50;
-  margin-top: 60px;
-}
-</style>
